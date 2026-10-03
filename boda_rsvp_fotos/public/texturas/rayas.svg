@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <defs>
+    <pattern id="r" width="6" height="96" patternUnits="userSpaceOnUse">
+      <rect width="1" height="96" fill="#000" fill-opacity=".55"/>
+    </pattern>
+    <pattern id="g" width="24" height="96" patternUnits="userSpaceOnUse">
+      <rect x="3" width="2" height="96" fill="#000" fill-opacity=".22"/>
+    </pattern>
+  </defs>
+  <rect width="96" height="96" fill="url(#r)"/>
+  <rect width="96" height="96" fill="url(#g)"/>
+</svg>

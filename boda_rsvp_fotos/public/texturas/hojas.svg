@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <defs>
+    <g id="rama" fill="#000" fill-opacity=".8" stroke="#000" stroke-opacity=".8" stroke-linecap="round">
+      <path d="M0 30 C 2 14 -2 -2 0 -30" fill="none" stroke-width="1.1"/>
+      <ellipse cx="-7" cy="18" rx="7.5" ry="3" transform="rotate(-38 -7 18)" stroke="none"/>
+      <ellipse cx="7" cy="9" rx="7.5" ry="3" transform="rotate(38 7 9)" stroke="none"/>
+      <ellipse cx="-7" cy="-1" rx="7" ry="2.8" transform="rotate(-38 -7 -1)" stroke="none"/>
+      <ellipse cx="7" cy="-11" rx="6.5" ry="2.6" transform="rotate(38 7 -11)" stroke="none"/>
+      <ellipse cx="-5" cy="-20" rx="5.5" ry="2.3" transform="rotate(-38 -5 -20)" stroke="none"/>
+      <ellipse cx="0" cy="-33" rx="5" ry="2.2" transform="rotate(90 0 -33)" stroke="none"/>
+    </g>
+  </defs>
+  <use href="#rama" transform="translate(64 70) rotate(-18)"/>
+  <use href="#rama" transform="translate(176 178) rotate(24)"/>
+  <use href="#rama" transform="translate(176 56) rotate(-62) scale(.62)"/>
+  <use href="#rama" transform="translate(62 184) rotate(70) scale(.62)"/>
+  <circle cx="120" cy="124" r="1.2" fill="#000" fill-opacity=".5"/>
+  <circle cx="14" cy="120" r="1.2" fill="#000" fill-opacity=".45"/>
+  <circle cx="226" cy="124" r="1.2" fill="#000" fill-opacity=".45"/>
+</svg>
