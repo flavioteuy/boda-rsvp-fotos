@@ -1,7 +1,7 @@
 # Boda — RSVP y fotos (add-on de Home Assistant)
 
 Sitio de la boda con confirmación de asistencia, galería de fotos y videos de los invitados, y panel de administración.
-Corre como add-on de Home Assistant (Node.js + Express). Repositorio **privado**.
+Corre como add-on de Home Assistant (Node.js + Express). Repositorio público: no contiene contraseñas ni datos de invitados (esos viven solo en tu Home Assistant).
 
 ## Estructura
 
@@ -12,10 +12,10 @@ boda_rsvp_fotos/         <- el add-on (config.yaml, Dockerfile, server.js, publi
 
 ## Instalarlo en Home Assistant
 
-1. Creá un token de GitHub **de solo lectura** para este repositorio (Settings → Developer settings → Personal access tokens → Fine-grained tokens → solo este repo → Permissions: *Contents: Read-only*).
-2. En Home Assistant: Ajustes → Complementos → Tienda de complementos → ⋮ (arriba a la derecha) → **Repositorios** → pegá:
-   `https://flavioteuy:TU_TOKEN@github.com/flavioteuy/boda-rsvp-fotos` → Añadir.
-3. Buscá «Boda - RSVP y Fotos» en la tienda, instalalo y activá **Actualización automática**.
+1. Ajustes → Complementos → Tienda de complementos → ⋮ (arriba a la derecha) → **Repositorios**.
+2. Pegá `https://github.com/flavioteuy/boda-rsvp-fotos` → Añadir → cerrar.
+3. Buscá «Boda - RSVP y Fotos» en la tienda (si no aparece: ⋮ → *Buscar actualizaciones* o recargá la página), instalalo y completá la pestaña **Configuración** (contraseña de administración, nombres, fecha, lugar).
+4. En la página del complemento activá **Actualización automática** si querés que se instale solo cada versión nueva.
 
 ## Publicar una versión nueva
 
