@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const { Readable, pipeline } = require('stream');
 const QRCode = require('qrcode');
+const homeAssistant = require('./homeassistant'); // estadisticas y avisos para Home Assistant (opcional)
 
 const DATA_DIR = fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data');
 const PHOTOS_DIR = path.join(DATA_DIR, 'fotos');
@@ -128,7 +129,11 @@ function readJSON(file) {
   try { txt = fs.readFileSync(file, 'utf8'); } catch (e) { return []; }
   try { return JSON.parse(txt); } catch (e) { respaldarCorrupto(file, txt); return []; }
 }
-function writeJSON(file, data) { escribirAtomico(file, JSON.stringify(data, null, 2)); }
+function writeJSON(file, data) {
+  escribirAtomico(file, JSON.stringify(data, null, 2));
+  // Cualquier cambio en confirmaciones o fotos (nuevas, borradas, recuperadas) se refleja en Home Assistant
+  if (file === RSVP_FILE || file === PHOTOS_META_FILE) homeAssistant.cambio();
+}
 
 // "Nuestra historia": titulo editable (vacio = "Nuestra historia") y texto propio (vacio = el automatico con la
 // fecha en que se conocieron). El titulo va en una sola linea; el texto conserva los saltos de linea.
@@ -1213,6 +1218,10 @@ app.post('/api/rsvp', limitar('rsvp', 60, 60 * 60 * 1000), (req, res) => {
   });
   writeJSON(RSVP_FILE, rsvps);
   res.json({ ok: true });
+  homeAssistant.evento({
+    evento: 'confirmacion', nombre: nombreLimpio, asiste: asistenciaLimpia === 'si', personas: cantidadNueva,
+    mensaje: String(mensaje || ''), grupo: grupoEncontrado ? grupoEncontrado.nombre : ''
+  });
 });
 // Las confirmaciones viejas (versiones anteriores) pueden no tener id: se les asigna una para poder borrarlas una por una.
 function leerRsvpsConId() {
@@ -1303,6 +1312,9 @@ app.post('/api/photos', limitar('subida', 4000, 60 * 60 * 1000), (req, res) => {
     }));
     writeJSON(PHOTOS_META_FILE, meta);
     res.json({ ok: true, cantidad: (req.files || []).length });
+    const videos = (req.files || []).filter(f => /^video\//.test(f.mimetype)).length;
+    const fotos = (req.files || []).length - videos;
+    if (fotos + videos > 0) homeAssistant.evento({ evento: 'subida', nombre: subidoPor, fotos, videos });
   });
 });
 // Cada invitado ve solo lo que el mismo subio desde su navegador/dispositivo (identificado por "vid").
@@ -1703,6 +1715,7 @@ async function registrarEvento(req) {
   const geo = await geoLookup(ip);
   if (geo) Object.assign(rec, geo);
   agregarLinea(rec);
+  homeAssistant.contarVisita(rec);
 }
 
 app.post('/api/visita', (req, res) => {
@@ -1742,6 +1755,7 @@ app.delete('/api/admin/visitas', checkAdmin, (req, res) => {
     fs.writeFileSync(VISITAS_FILE, '', { flag: 'w' });
     geoCache.clear();
     limiteVisitas.clear();
+    homeAssistant.reiniciarVisitas();
   } catch (e) { return res.status(500).json({ error: 'No se pudo reiniciar' }); }
   res.json({ ok: true });
 });
@@ -1933,9 +1947,23 @@ process.on('unhandledRejection', (e) => console.error('Promesa sin manejar:', e 
 process.on('uncaughtException', (e) => console.error('Excepcion sin manejar:', e && e.stack ? e.stack : e));
 
 const servidor = app.listen(PORT, '0.0.0.0', () => console.log('Sitio de la boda escuchando en el puerto ' + PORT));
+
 // Videos grandes desde el celular pueden tardar mas de los 5 minutos que Node permite por defecto
 servidor.requestTimeout = 60 * 60 * 1000;
 servidor.headersTimeout = 65 * 1000;
+
+// Home Assistant: entidades sensor.boda_datos / sensor.boda_actividad y evento boda_evento (ver README, version 1.25.0)
+// Se lee sin crear respaldos .corrupto-* (eso ya lo hace la lectura normal del sitio): esto corre cada minuto.
+function leerJSONSinRespaldo(file) { try { const d = JSON.parse(fs.readFileSync(file, 'utf8')); return Array.isArray(d) ? d : []; } catch (e) { return []; } }
+homeAssistant.iniciar({
+  leerRsvps: () => leerJSONSinRespaldo(RSVP_FILE),
+  leerFotos: () => leerJSONSinRespaldo(PHOTOS_META_FILE),
+  leerConfig: readSiteConfig,
+  archivoVisitas: VISITAS_FILE,
+  zonaHoraria: TZ_LOCAL,
+  habilitado: opciones.homeassistant !== false,
+  invitadosEsperados: opciones.invitados_esperados
+});
 
 // Para las pruebas automaticas
 module.exports = { generarZip, nombreSeguroArchivo, pasesDescarga };

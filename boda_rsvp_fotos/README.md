@@ -1170,3 +1170,27 @@ Todo lo nuevo se carga desde el panel. **Nada cambia en el sitio hasta que lo gu
 **Pruebas (solo lo modificado):** servidor, 8 nuevas (contraseña, pedidos mal formados, borra solo lo pedido, nombres con `../` o que no están en la lista, repetir el pedido, 3 000 de una vez, ZIP pedido antes) y una más en «solo red local»; navegador, 22 nuevas en el panel (celular y escritorio: confirmación, cancelar, escribir BORRAR, tandas de 500, falla a mitad, sin conexión, doble clic). Repetí también las 38 de la 1.23.0 y la de los videos del panel; siguen pasando. No probé con tu servidor real ni en un celular físico.
 
 **Para actualizar:** reemplazá `server.js`, `panel` y `public` (borrá `public/admin.html` si existe) y **Reconstruir**. Tu configuración y tus fotos se conservan.
+
+## 39. Cambios de esta versión (1.25.0) — la boda en Home Assistant: gráficas y avisos por Alexa
+
+**Qué hace:** el add-on publica sus números como entidades de Home Assistant y avisa de cada confirmación y cada subida. Nada cambia en el sitio ni en el panel.
+
+- **`sensor.boda_datos`**: en sus atributos, visitas (totales, de hoy y personas distintas, con el mismo criterio que las estadísticas del panel: sin bots), respuestas, personas que van y que no, invitados esperados, pendientes, % respondido, fotos, videos, subidas de hoy, fecha de la boda y los grupos que todavía no respondieron. Su estado es la fecha y hora de la última novedad.
+- **`sensor.boda_actividad`**: las últimas 60 confirmaciones (nombre, si va, personas, mensaje, grupo) y las últimas 30 subidas (las fotos seguidas de una misma persona se juntan en una fila).
+- **Evento `boda_evento`**: con cada confirmación y cada subida, con los totales ya actualizados.
+
+Se actualiza a los pocos segundos de cada cambio (también al **borrar** o **recuperar** confirmaciones, borrar fotos o reiniciar las estadísticas) y se vuelve a mandar cada minuto, así que si reiniciás Home Assistant las entidades vuelven solas.
+
+**Sin configurar nada:** usa la API interna del Supervisor (`homeassistant_api: true` en `config.yaml`). No hace falta webhook, token ni abrir nada a internet. Si Home Assistant no responde, el sitio sigue igual (el Registro lo avisa **una sola vez** y reintenta cada minuto).
+
+**Opciones nuevas** (pestaña Configuración, opcionales):
+- `invitados_esperados`: total de invitados para «pendientes» y el %. Vacío = la suma de los grupos (su límite, o la cantidad de nombres cargados).
+- `homeassistant: false`: apaga la publicación.
+
+**Del lado de Home Assistant:** en la carpeta [`home-assistant/`](../home-assistant/) del repositorio hay un paquete (`boda.yaml`) que convierte esos datos en sensores con historial y gráficas por día, y agrega: «Alexa, novedades de la boda» (qué cambió desde la última vez que preguntaste), «Alexa, resumen de la boda», anuncios de cada confirmación, de fotos nuevas (agrupadas), hitos de visitas y horario de silencio. También un dashboard listo para pegar. Instrucciones en `home-assistant/LEEME.md`.
+
+**Por dentro:** un archivo nuevo, `homeassistant.js`. Las visitas se cuentan en memoria (al arrancar se lee `visitas.jsonl` de a una línea) para no releer un archivo de hasta 100 MB cada minuto; confirmaciones y fotos se leen de sus archivos, sin crear copias `.corrupto-*`. Los nombres y mensajes llegan a Home Assistant sin etiquetas ni símbolos de formato.
+
+**Pruebas:** el `server.js` real corriendo contra un Home Assistant falso que registra lo que recibe: 35 comprobaciones (lectura de lo que ya había, visitas idénticas a las del panel incluyendo bots y repetidas, confirmaciones y fotos con sus eventos y totales, borrar, deshacer, reiniciar estadísticas, HA caído sin afectar al sitio y HA reiniciado). Como en este entorno no se pudo instalar npm, Express y Multer se reemplazaron por versiones mínimas de prueba. El paquete de Home Assistant se probó en un simulador de sus plantillas con lo que publicó el servidor (39 comprobaciones). **No se probó en tu Home Assistant real ni con un Echo real.**
+
+**Para actualizar:** reemplazá `server.js`, `config.yaml`, `Dockerfile`, `panel` y `public`, agregá **`homeassistant.js`** (nuevo) y **Reconstruir**/**Actualizar**. Tu configuración, confirmaciones y fotos se conservan.

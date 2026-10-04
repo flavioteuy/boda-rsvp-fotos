@@ -7,7 +7,8 @@ Corre como add-on de Home Assistant (Node.js + Express). Repositorio público: n
 
 ```
 repository.yaml          <- le dice a Home Assistant que esto es un repositorio de add-ons
-boda_rsvp_fotos/         <- el add-on (config.yaml, Dockerfile, server.js, public/, panel/)
+boda_rsvp_fotos/         <- el add-on (config.yaml, Dockerfile, server.js, homeassistant.js, public/, panel/)
+home-assistant/          <- paquete y dashboard para Home Assistant: gráficas, anuncios y órdenes de voz de Alexa (ver su LEEME.md)
 ```
 
 ## Instalarlo en Home Assistant

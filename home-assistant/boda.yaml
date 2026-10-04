@@ -1,0 +1,557 @@
+###############################################################################
+#  BODA  ·  Paquete de Home Assistant para el add-on "Boda - RSVP y Fotos"
+#  --------------------------------------------------------------------------
+#  El add-on (1.25.0+) publica solo:
+#    sensor.boda_datos      → todos los números en atributos
+#    sensor.boda_actividad  → últimas confirmaciones y subidas
+#    evento boda_evento     → cada confirmación y cada subida
+#  Este paquete los convierte en sensores con historial y gráficas, y agrega
+#  los anuncios y las órdenes de voz de Alexa.
+#
+#  Instalación (detalle en LEEME.md):
+#    1. configuration.yaml →  homeassistant:
+#                               packages: !include_dir_named packages
+#    2. Copiar este archivo a /config/packages/boda.yaml
+#    3. Reiniciar Home Assistant
+#
+#  Requiere Home Assistant 2024.10 o superior (2025.6+ para Alexa Devices).
+###############################################################################
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  AJUSTES (se cambian desde el dashboard)
+# ─────────────────────────────────────────────────────────────────────────────
+input_text:
+  boda_alexa_destino:
+    name: Boda Destino Alexa
+    icon: mdi:speaker-message
+    max: 255
+  boda_ultimo_anuncio:
+    name: Boda Último anuncio
+    icon: mdi:message-text
+    max: 255
+
+input_boolean:
+  boda_anunciar_confirmaciones:
+    name: Boda Anunciar cada confirmación
+    icon: mdi:account-voice
+  boda_anunciar_subidas:
+    name: Boda Anunciar fotos y videos nuevos
+    icon: mdi:image-multiple
+  boda_anunciar_hitos:
+    name: Boda Anunciar hitos
+    icon: mdi:trophy
+
+input_number:
+  boda_ventana_subidas_min:
+    name: Boda Agrupar subidas (minutos)
+    icon: mdi:timer-sand
+    min: 5
+    max: 120
+    step: 5
+    unit_of_measurement: min
+  boda_hito_visitas:
+    name: Boda Hito cada N visitas
+    icon: mdi:flag-checkered
+    min: 100
+    max: 10000
+    step: 100
+    mode: box
+
+input_datetime:
+  boda_silencio_desde:
+    name: Boda Silencio desde
+    icon: mdi:sleep
+    has_date: false
+    has_time: true
+  boda_silencio_hasta:
+    name: Boda Silencio hasta
+    icon: mdi:alarm
+    has_date: false
+    has_time: true
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SENSORES
+# ─────────────────────────────────────────────────────────────────────────────
+template:
+  # Números del add-on como sensores de verdad (con historial y estadísticas de largo plazo)
+  - sensor:
+      - name: Boda Visitas
+        unique_id: boda_visitas
+        icon: mdi:eye
+        unit_of_measurement: visitas
+        state_class: total_increasing
+        availability: "{{ state_attr('sensor.boda_datos', 'visitas') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'visitas') }}"
+
+      - name: Boda Visitantes Unicos
+        unique_id: boda_visitantes_unicos
+        icon: mdi:account-eye
+        unit_of_measurement: personas
+        state_class: total_increasing
+        availability: "{{ state_attr('sensor.boda_datos', 'visitantes_unicos') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'visitantes_unicos') }}"
+
+      - name: Boda Visitas Hoy
+        unique_id: boda_visitas_hoy
+        icon: mdi:eye-outline
+        unit_of_measurement: visitas
+        availability: "{{ state_attr('sensor.boda_datos', 'visitas_hoy') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'visitas_hoy') }}"
+
+      - name: Boda Respuestas
+        unique_id: boda_respuestas
+        icon: mdi:email-check
+        unit_of_measurement: respuestas
+        state_class: total
+        availability: "{{ state_attr('sensor.boda_datos', 'respuestas') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'respuestas') }}"
+
+      - name: Boda Respuestas Hoy
+        unique_id: boda_respuestas_hoy
+        icon: mdi:email-fast
+        unit_of_measurement: respuestas
+        availability: "{{ state_attr('sensor.boda_datos', 'respuestas_hoy') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'respuestas_hoy') }}"
+
+      - name: Boda Personas Confirmadas
+        unique_id: boda_personas_confirmadas
+        icon: mdi:account-check
+        unit_of_measurement: personas
+        state_class: measurement
+        availability: "{{ state_attr('sensor.boda_datos', 'personas_si') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'personas_si') }}"
+
+      - name: Boda Personas que No Van
+        unique_id: boda_personas_que_no_van
+        icon: mdi:account-cancel
+        unit_of_measurement: personas
+        state_class: measurement
+        availability: "{{ state_attr('sensor.boda_datos', 'personas_no') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'personas_no') }}"
+
+      - name: Boda Invitados Esperados
+        unique_id: boda_invitados_esperados
+        icon: mdi:account-group
+        unit_of_measurement: personas
+        availability: "{{ state_attr('sensor.boda_datos', 'invitados_esperados') | int(0) > 0 }}"
+        state: "{{ state_attr('sensor.boda_datos', 'invitados_esperados') }}"
+        attributes:
+          origen: "{{ state_attr('sensor.boda_datos', 'origen_esperados') }}"
+
+      - name: Boda Pendientes de Responder
+        unique_id: boda_pendientes_de_responder
+        icon: mdi:account-question
+        unit_of_measurement: personas
+        state_class: measurement
+        availability: "{{ state_attr('sensor.boda_datos', 'pendientes') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'pendientes') }}"
+        attributes:
+          grupos_sin_respuesta: "{{ state_attr('sensor.boda_datos', 'grupos_sin_respuesta') or [] }}"
+
+      - name: Boda Porcentaje Respondido
+        unique_id: boda_porcentaje_respondido
+        icon: mdi:percent-circle
+        unit_of_measurement: "%"
+        state_class: measurement
+        availability: "{{ state_attr('sensor.boda_datos', 'porcentaje_respondido') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'porcentaje_respondido') }}"
+
+      - name: Boda Fotos
+        unique_id: boda_fotos
+        icon: mdi:camera
+        unit_of_measurement: fotos
+        state_class: total
+        availability: "{{ state_attr('sensor.boda_datos', 'fotos') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'fotos') }}"
+
+      - name: Boda Videos
+        unique_id: boda_videos
+        icon: mdi:video
+        unit_of_measurement: videos
+        state_class: total
+        availability: "{{ state_attr('sensor.boda_datos', 'videos') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'videos') }}"
+
+      - name: Boda Subidas Hoy
+        unique_id: boda_subidas_hoy
+        icon: mdi:image-plus
+        unit_of_measurement: archivos
+        availability: "{{ state_attr('sensor.boda_datos', 'subidas_hoy') is number }}"
+        state: "{{ state_attr('sensor.boda_datos', 'subidas_hoy') }}"
+
+      - name: Boda Dias para la Boda
+        unique_id: boda_dias_para_la_boda
+        icon: mdi:calendar-heart
+        unit_of_measurement: días
+        availability: >-
+          {% set f = strptime(state_attr('sensor.boda_datos', 'fecha_boda') | string, '%Y-%m-%d', none) %}
+          {{ f is not none and (f.date() - now().date()).days >= 0 }}
+        state: >-
+          {{ (strptime(state_attr('sensor.boda_datos', 'fecha_boda') | string, '%Y-%m-%d').date() - now().date()).days }}
+
+      # Qué Echo escuchó la última orden de voz (integración oficial Alexa Devices).
+      # Se usa para detectar "Alexa, novedades de la boda" y responder en ese mismo Echo.
+      - name: Boda Alexa Ultima Orden
+        unique_id: boda_alexa_ultima_orden
+        icon: mdi:microphone-message
+        state: >-
+          {% set e = expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
+                     | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                     | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) %}
+          {{ states(e) if e else 'sin datos' }}
+        attributes:
+          entidad: >-
+            {{ expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
+               | rejectattr('state', 'in', ['unknown', 'unavailable'])
+               | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) }}
+          orden: >-
+            {% set e = expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
+                       | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                       | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) %}
+            {{ (state_attr(e, 'voice_command') or '') if e else '' }}
+          responder_en: >-
+            {% set e = expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
+                       | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                       | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) %}
+            {{ (device_entities(device_id(e)) | select('match', '^notify[.].*_speak$') | first | default('', true)) if e else '' }}
+
+  - binary_sensor:
+      - name: Boda Horario de Silencio
+        unique_id: boda_horario_de_silencio
+        icon: mdi:sleep
+        state: >-
+          {% set d = states('input_datetime.boda_silencio_desde')[:5] %}
+          {% set h = states('input_datetime.boda_silencio_hasta')[:5] %}
+          {% set n = now().strftime('%H:%M') %}
+          {% if d == h or d in ['unkno', 'unava'] %}false
+          {% elif d < h %}{{ d <= n and n < h }}
+          {% else %}{{ n >= d or n < h }}{% endif %}
+
+  # Foto de los números en la última consulta de "novedades" (se conserva al reiniciar).
+  - triggers:
+      - trigger: event
+        event_type: boda_marcar_revisado
+    sensor:
+      - name: Boda Ultima Revision
+        unique_id: boda_ultima_revision
+        icon: mdi:eye-check
+        device_class: timestamp
+        state: "{{ now().isoformat() }}"
+        attributes:
+          visitas: "{{ state_attr('sensor.boda_datos', 'visitas') | int(0) }}"
+          respuestas: "{{ state_attr('sensor.boda_datos', 'respuestas') | int(0) }}"
+          personas_si: "{{ state_attr('sensor.boda_datos', 'personas_si') | int(0) }}"
+          personas_no: "{{ state_attr('sensor.boda_datos', 'personas_no') | int(0) }}"
+          fotos: "{{ state_attr('sensor.boda_datos', 'fotos') | int(0) }}"
+          videos: "{{ state_attr('sensor.boda_datos', 'videos') | int(0) }}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SCRIPTS
+# ─────────────────────────────────────────────────────────────────────────────
+script:
+  # Envía un texto a Alexa. Detecta solo el tipo de destino:
+  #   notify.xxx_announce / notify.xxx_speak → integración oficial "Alexa Devices"
+  #   media_player.xxx                       → "Alexa Media Player" (HACS)
+  #   vacío                                  → notificación en Home Assistant
+  boda_anunciar:
+    alias: Boda anunciar
+    description: Dice un mensaje en Alexa respetando el horario de silencio.
+    icon: mdi:bullhorn
+    mode: queued
+    max: 20
+    fields:
+      mensaje:
+        name: Mensaje
+        required: true
+        selector: { text: { multiline: true } }
+      destino:
+        name: Destino (opcional)
+        description: Entidad notify o media_player; varias separadas por coma. Vacío = la configurada.
+        selector: { text: {} }
+      forzar:
+        name: Ignorar horario de silencio
+        selector: { boolean: {} }
+    sequence:
+      - variables:
+          texto: "{{ (mensaje | default('') | string) | regex_replace('\\s+', ' ') | trim }}"
+          lista: >-
+            {% set d = (destino | default('', true) | string) | trim %}
+            {% if not d %}{% set d = states('input_text.boda_alexa_destino') | trim %}{% endif %}
+            {{ (d.split(',') | map('trim') | select | list) if d not in ['', 'unknown', 'unavailable'] else [] }}
+      - condition: template
+        value_template: "{{ texto | length > 0 }}"
+      - action: input_text.set_value
+        target: { entity_id: input_text.boda_ultimo_anuncio }
+        data: { value: "{{ texto if texto | length <= 255 else texto[:252] ~ '...' }}" }
+      - condition: template
+        value_template: "{{ forzar | default(false) or is_state('binary_sensor.boda_horario_de_silencio', 'off') }}"
+      - choose:
+          - conditions: "{{ lista | select('match', 'notify[.]') | list | count > 0 }}"
+            sequence:
+              - action: notify.send_message
+                target:
+                  entity_id: "{{ lista | select('match', 'notify[.]') | list }}"
+                data:
+                  message: "{{ texto }}"
+          - conditions: "{{ lista | select('match', 'media_player[.]') | list | count > 0 }}"
+            sequence:
+              - action: notify.alexa_media
+                data:
+                  target: "{{ lista | select('match', 'media_player[.]') | list }}"
+                  message: "{{ texto }}"
+                  data:
+                    type: announce
+        default:
+          - action: persistent_notification.create
+            data:
+              title: 💍 Boda
+              message: "{{ texto }}"
+              notification_id: boda_anuncio
+
+  boda_resumen:
+    alias: Boda resumen
+    description: Alexa dice el estado completo de la boda.
+    icon: mdi:clipboard-text
+    mode: single
+    fields:
+      destino:
+        name: Destino (opcional)
+        selector: { text: {} }
+    sequence:
+      - action: script.boda_anunciar
+        data:
+          destino: "{{ destino | default('') }}"
+          forzar: true
+          mensaje: >-
+            {% macro pl(n, s, p) %}{{ n }} {{ s if n | int == 1 else p }}{% endmacro %}
+            {% macro nombres(xs) %}{% set xs = xs | reject('eq', '') | list %}{% if xs | count > 1 %}{{ xs[:-1] | join(', ') }} y {{ xs[-1] }}{% else %}{{ xs | join('') }}{% endif %}{% endmacro %}
+            {% set D = 'sensor.boda_datos' %}
+            {% if not has_value(D) %}
+              No tengo datos de la boda. Revisá que el complemento de la boda esté funcionando.
+            {% else %}
+            {% set si = state_attr(D, 'personas_si') | int(0) %}
+            {% set no = state_attr(D, 'personas_no') | int(0) %}
+            {% set resp = state_attr(D, 'respuestas') | int(0) %}
+            {% set esp = state_attr(D, 'invitados_esperados') | int(0) %}
+            {% set vis = state_attr(D, 'visitas') | int(0) %}
+            {% set uni = state_attr(D, 'visitantes_unicos') | int(0) %}
+            {% set fo = state_attr(D, 'fotos') | int(0) %}
+            {% set vi = state_attr(D, 'videos') | int(0) %}
+            {% set sin = state_attr(D, 'grupos_sin_respuesta') or [] %}
+            {% set novios = [state_attr(D, 'novia'), state_attr(D, 'novio')] | reject('none') | reject('eq', '') | list %}
+            {% set dias = states('sensor.boda_dias_para_la_boda') %}
+            Resumen de la boda{{ ' de ' ~ novios | join(' y ') if novios | count == 2 else '' }}.
+            {% if resp == 0 %}Todavía no hay confirmaciones.
+            {% else %}Van {{ pl(si, 'persona confirmada', 'personas confirmadas') }}{% if no %} y {{ pl(no, 'persona avisó', 'personas avisaron') }} que no {{ 'va' if no == 1 else 'van' }}{% endif %}, en {{ pl(resp, 'respuesta', 'respuestas') }}.{% endif %}
+            {% if esp > 0 %}{% set pend = state_attr(D, 'pendientes') | int(0) %}{% if pend == 0 %}¡Ya respondieron todos los invitados!{% else %}Faltan responder {{ pend }} de {{ esp }} invitados.{% endif %}{% endif %}
+            {% if sin | count > 0 and sin | count <= 5 %}{{ 'Todavía no respondió el grupo' if sin | count == 1 else 'Todavía no respondieron los grupos' }} {{ nombres(sin) }}.{% elif sin | count > 5 %}Hay {{ sin | count }} grupos que todavía no respondieron.{% endif %}
+            La invitación tiene {{ pl(vis, 'visita', 'visitas') }}{% if uni %} de {{ pl(uni, 'persona distinta', 'personas distintas') }}{% endif %}.
+            En la galería hay {{ pl(fo, 'foto', 'fotos') }} y {{ pl(vi, 'video', 'videos') }}.
+            {% if dias | is_number %}{% set d = dias | int %}{% if d == 0 %}¡La boda es hoy!{% elif d == 1 %}¡La boda es mañana!{% else %}Faltan {{ d }} días para la boda.{% endif %}{% endif %}
+            {% endif %}
+
+  boda_novedades:
+    alias: Boda novedades
+    description: Alexa dice qué cambió desde la última consulta y la marca como leída.
+    icon: mdi:bell-ring
+    mode: single
+    fields:
+      destino:
+        name: Destino (opcional)
+        selector: { text: {} }
+    sequence:
+      - action: script.boda_anunciar
+        data:
+          destino: "{{ destino | default('') }}"
+          forzar: true
+          mensaje: >-
+            {% macro pl(n, s, p) %}{{ n }} {{ s if n | int == 1 else p }}{% endmacro %}
+            {% macro nombres(xs) %}{% set xs = xs | reject('eq', '') | list %}{% if xs | count > 5 %}{{ xs[:5] | join(', ') }} y {{ xs | count - 5 }} más{% elif xs | count > 1 %}{{ xs[:-1] | join(', ') }} y {{ xs[-1] }}{% else %}{{ xs | join('') }}{% endif %}{% endmacro %}
+            {% set D = 'sensor.boda_datos' %}
+            {% set r = 'sensor.boda_ultima_revision' %}
+            {% if not has_value(D) %}
+              No tengo datos de la boda. Revisá que el complemento de la boda esté funcionando.
+            {% else %}
+            {% set desde = as_datetime(states(r)) if has_value(r) else none %}
+            {% set si = state_attr(D, 'personas_si') | int(0) %}
+            {% set d_si = si - (state_attr(r, 'personas_si') | int(0)) %}
+            {% set d_resp = state_attr(D, 'respuestas') | int(0) - (state_attr(r, 'respuestas') | int(0)) %}
+            {% set d_vis = state_attr(D, 'visitas') | int(0) - (state_attr(r, 'visitas') | int(0)) %}
+            {% set d_fo = state_attr(D, 'fotos') | int(0) - (state_attr(r, 'fotos') | int(0)) %}
+            {% set d_vi = state_attr(D, 'videos') | int(0) - (state_attr(r, 'videos') | int(0)) %}
+            {% set ns = namespace(si=[], no=[]) %}
+            {% for x in (state_attr('sensor.boda_actividad', 'confirmaciones') or []) | reverse %}
+              {% if x.t and (desde is none or as_datetime(x.t) > desde) %}
+                {% if x.a %}{% set ns.si = ns.si + [x.n] %}{% else %}{% set ns.no = ns.no + [x.n] %}{% endif %}
+              {% endif %}
+            {% endfor %}
+            {% set meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
+            {% if desde is none %}{% set cuando = 'hasta ahora' %}
+            {% else %}{% set dl = as_local(desde) %}{% set hace = (now().date() - dl.date()).days %}
+              {% set cuando = 'desde las ' ~ dl.strftime('%H:%M') if hace == 0 else ('desde ayer a las ' ~ dl.strftime('%H:%M') if hace == 1 else 'desde el ' ~ dl.day ~ ' de ' ~ meses[dl.month - 1]) %}
+            {% endif %}
+            {% if d_resp <= 0 and d_vis <= 0 and d_fo <= 0 and d_vi <= 0 %}
+              No hay novedades de la boda {{ cuando }}.
+            {% else %}
+              Novedades de la boda {{ cuando }}.
+              {% if d_resp > 0 %}{{ 'Llegó' if d_resp == 1 else 'Llegaron' }} {{ pl(d_resp, 'respuesta nueva', 'respuestas nuevas') }}.
+                {% if ns.si %}{{ 'Confirmó' if ns.si | count == 1 else 'Confirmaron' }} {{ nombres(ns.si) }}{% if d_si > 0 %}, {{ 'en total' if ns.si | count > 1 else 'son' }} {{ pl(d_si, 'persona', 'personas') }}{% endif %}.{% endif %}
+                {% if ns.no %}No {{ 'podrá' if ns.no | count == 1 else 'podrán' }} ir {{ nombres(ns.no) }}.{% endif %}
+              {% endif %}
+              {% if d_vis > 0 %}La invitación tuvo {{ pl(d_vis, 'visita nueva', 'visitas nuevas') }}.{% endif %}
+              {% if d_fo > 0 or d_vi > 0 %}En la galería hay {% if d_fo > 0 %}{{ pl(d_fo, 'foto nueva', 'fotos nuevas') }}{% endif %}{% if d_fo > 0 and d_vi > 0 %} y {% endif %}{% if d_vi > 0 %}{{ pl(d_vi, 'video nuevo', 'videos nuevos') }}{% endif %}.{% endif %}
+            {% endif %}
+            En total van {{ pl(si, 'persona confirmada', 'personas confirmadas') }}.
+            {% endif %}
+      - event: boda_marcar_revisado
+
+  boda_marcar_revisado:
+    alias: Boda marcar como revisado
+    description: Pone en cero las "novedades" sin que Alexa hable.
+    icon: mdi:eye-check
+    mode: single
+    sequence:
+      - event: boda_marcar_revisado
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  AUTOMATIZACIONES
+# ─────────────────────────────────────────────────────────────────────────────
+automation:
+  # 1) Anunciar cada confirmación al momento (evento que manda el add-on)
+  - id: boda_anunciar_confirmacion
+    alias: Boda · Anunciar cada confirmación
+    mode: queued
+    max: 30
+    triggers:
+      - trigger: event
+        event_type: boda_evento
+        event_data: { evento: confirmacion }
+    conditions:
+      - condition: state
+        entity_id: input_boolean.boda_anunciar_confirmaciones
+        state: "on"
+    actions:
+      - action: script.boda_anunciar
+        data:
+          mensaje: >-
+            {% set d = trigger.event.data %}
+            {% set p = d.personas | int(1) %}
+            {% set total = (d.totales.personas_si if d.totales is defined and d.totales is mapping else state_attr('sensor.boda_datos', 'personas_si')) | int(0) %}
+            {% if d.asiste %}
+              ¡Nueva confirmación{{ ' de ' ~ d.nombre if d.nombre else '' }}! {{ p }} {{ 'persona' if p == 1 else 'personas' }}.
+              Ya van {{ total }} confirmados.
+            {% else %}
+              {{ d.nombre if d.nombre else 'Un invitado' }} avisó que no {{ 'podrá ir' if p == 1 else 'podrán ir ' ~ p ~ ' personas' }} a la boda.
+            {% endif %}
+
+  # 2) Anunciar fotos y videos nuevos, agrupados para no hablar a cada rato
+  - id: boda_anunciar_subidas
+    alias: Boda · Anunciar fotos y videos nuevos
+    mode: single
+    max_exceeded: silent
+    triggers:
+      - trigger: event
+        event_type: boda_evento
+        event_data: { evento: subida }
+    conditions:
+      - condition: state
+        entity_id: input_boolean.boda_anunciar_subidas
+        state: "on"
+    actions:
+      - variables:
+          tot: "{{ trigger.event.data.totales if trigger.event.data.totales is defined and trigger.event.data.totales is mapping else {} }}"
+      - variables:
+          fotos_ini: "{{ (tot.fotos if tot.fotos is defined else state_attr('sensor.boda_datos', 'fotos')) | int(0) - trigger.event.data.fotos | int(0) }}"
+          videos_ini: "{{ (tot.videos if tot.videos is defined else state_attr('sensor.boda_datos', 'videos')) | int(0) - trigger.event.data.videos | int(0) }}"
+      - delay:
+          minutes: "{{ states('input_number.boda_ventana_subidas_min') | int(5) }}"
+      - variables:
+          df: "{{ state_attr('sensor.boda_datos', 'fotos') | int(0) - fotos_ini }}"
+          dv: "{{ state_attr('sensor.boda_datos', 'videos') | int(0) - videos_ini }}"
+      - condition: template
+        value_template: "{{ df > 0 or dv > 0 }}"
+      - action: script.boda_anunciar
+        data:
+          mensaje: >-
+            {% set partes = [] %}
+            {% if df > 0 %}{% set partes = partes + [df ~ (' foto nueva' if df == 1 else ' fotos nuevas')] %}{% endif %}
+            {% if dv > 0 %}{% set partes = partes + [dv ~ (' video nuevo' if dv == 1 else ' videos nuevos')] %}{% endif %}
+            Llegaron {{ partes | join(' y ') }} a la galería de la boda.
+            Ya son {{ state_attr('sensor.boda_datos', 'fotos') }} fotos y {{ state_attr('sensor.boda_datos', 'videos') }} videos.
+
+  # 3) Hitos: cada N visitas y cuando respondieron todos
+  - id: boda_hitos
+    alias: Boda · Anunciar hitos
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: sensor.boda_visitas
+        id: visitas
+      - trigger: state
+        entity_id: sensor.boda_pendientes_de_responder
+        to: "0"
+        id: todos
+    conditions:
+      - condition: state
+        entity_id: input_boolean.boda_anunciar_hitos
+        state: "on"
+      - "{{ trigger.from_state is not none and trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: visitas
+              # Las visitas llegan agrupadas (pueden sumar varias de golpe): se anuncia al cruzar cada múltiplo de N
+              - >-
+                {% set a = trigger.from_state.state | int(0) %}
+                {% set b = trigger.to_state.state | int(0) %}
+                {% set n = states('input_number.boda_hito_visitas') | int(100) %}
+                {{ n > 0 and b > a and (b // n) > (a // n) }}
+            sequence:
+              - action: script.boda_anunciar
+                data:
+                  mensaje: >-
+                    {% set n = states('input_number.boda_hito_visitas') | int(100) %}
+                    ¡La invitación de la boda llegó a {{ (trigger.to_state.state | int(0) // n) * n }} visitas!
+          - conditions:
+              - condition: trigger
+                id: todos
+            sequence:
+              - action: script.boda_anunciar
+                data:
+                  mensaje: >-
+                    ¡Ya respondieron todos los invitados de la boda!
+                    Van {{ state_attr('sensor.boda_datos', 'personas_si') }} personas confirmadas.
+
+  # 4) Orden de voz: "Alexa, novedades de la boda" / "Alexa, resumen de la boda"
+  #    Requiere la integración oficial Alexa Devices (lee el historial de voz del Echo)
+  #    y responde en el mismo Echo que te escuchó.
+  - id: boda_orden_de_voz
+    alias: Boda · Responder orden de voz de Alexa
+    mode: single
+    max_exceeded: silent
+    triggers:
+      - trigger: state
+        entity_id: sensor.boda_alexa_ultima_orden
+        not_from: [unknown, unavailable]
+        not_to: [unknown, unavailable, sin datos]
+    conditions:
+      - "{{ 'boda' in (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower }}"
+      - >-
+        {% set t = as_datetime(states('sensor.boda_alexa_ultima_orden')) %}
+        {{ t is not none and (now() - t).total_seconds() < 180 }}
+    actions:
+      - variables:
+          orden: "{{ (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower }}"
+          destino: "{{ state_attr('sensor.boda_alexa_ultima_orden', 'responder_en') or '' }}"
+      - if: "{{ orden is search('novedad|nuevo|nueva|cambio|pasó|paso') }}"
+        then:
+          - action: script.boda_novedades
+            data: { destino: "{{ destino }}" }
+        else:
+          - action: script.boda_resumen
+            data: { destino: "{{ destino }}" }

@@ -1,0 +1,254 @@
+# Dashboard "Boda" para Home Assistant (usa las entidades de boda.yaml)
+# Ajustes → Paneles → Añadir panel → "Nuevo panel desde cero" → abrirlo →
+# lápiz (editar) → ⋮ → "Editor de configuración en bruto" → pegar todo esto.
+# Solo usa tarjetas nativas (no hace falta HACS).
+
+title: Boda
+views:
+  - title: Boda
+    path: boda
+    icon: mdi:ring
+    type: sections
+    max_columns: 4
+    sections:
+      # ── Confirmaciones ────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Confirmaciones
+            icon: mdi:email-check
+          - type: tile
+            entity: sensor.boda_personas_confirmadas
+            name: Van
+            color: green
+          - type: tile
+            entity: sensor.boda_personas_que_no_van
+            name: No van
+            color: red
+          - type: tile
+            entity: sensor.boda_pendientes_de_responder
+            name: Sin responder
+            color: amber
+          - type: tile
+            entity: sensor.boda_dias_para_la_boda
+            name: Faltan
+            color: pink
+          - type: gauge
+            entity: sensor.boda_porcentaje_respondido
+            name: Respondieron
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 80
+              yellow: 40
+              red: 0
+          - type: tile
+            entity: sensor.boda_respuestas_hoy
+            name: Respuestas hoy
+            color: indigo
+          - type: markdown
+            grid_options:
+              columns: full
+            content: |-
+              {% set g = state_attr('sensor.boda_datos', 'grupos_sin_respuesta') or [] %}
+              {%- if state_attr('sensor.boda_datos', 'grupos') | int(0) == 0 %}*Sin grupos cargados en el panel de la boda.*
+              {%- elif not g %}✅ **Todos los grupos respondieron.**
+              {%- else %}**Grupos sin respuesta ({{ g | count }}):** {{ g | join(', ') }}{% endif %}
+
+      # ── Invitación ────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Invitación
+            icon: mdi:eye
+          - type: tile
+            entity: sensor.boda_visitas
+            name: Visitas
+            color: blue
+          - type: tile
+            entity: sensor.boda_visitantes_unicos
+            name: Personas distintas
+            color: cyan
+          - type: tile
+            entity: sensor.boda_visitas_hoy
+            name: Visitas hoy
+            color: light-blue
+          - type: statistics-graph
+            title: Visitas por día
+            entities:
+              - entity: sensor.boda_visitas
+                name: Visitas
+              - entity: sensor.boda_visitantes_unicos
+                name: Personas nuevas
+            stat_types: [change]
+            period: day
+            days_to_show: 30
+            chart_type: bar
+            grid_options:
+              columns: full
+
+      # ── Galería ───────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Galería
+            icon: mdi:image-multiple
+          - type: tile
+            entity: sensor.boda_fotos
+            name: Fotos
+            color: purple
+          - type: tile
+            entity: sensor.boda_videos
+            name: Videos
+            color: deep-purple
+          - type: tile
+            entity: sensor.boda_subidas_hoy
+            name: Subidas hoy
+            color: pink
+          - type: statistics-graph
+            title: Subidas por día
+            entities:
+              - entity: sensor.boda_fotos
+                name: Fotos
+              - entity: sensor.boda_videos
+                name: Videos
+            stat_types: [change]
+            period: day
+            days_to_show: 30
+            chart_type: bar
+            grid_options:
+              columns: full
+
+      # ── Evolución ─────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Evolución
+            icon: mdi:chart-line
+          - type: statistics-graph
+            title: Personas confirmadas
+            entities:
+              - entity: sensor.boda_personas_confirmadas
+                name: Van
+              - entity: sensor.boda_personas_que_no_van
+                name: No van
+            stat_types: [max]
+            period: day
+            days_to_show: 60
+            chart_type: line
+            grid_options:
+              columns: full
+          - type: statistics-graph
+            title: Visitas por hora (últimos 2 días)
+            entities:
+              - entity: sensor.boda_visitas
+                name: Visitas
+            stat_types: [change]
+            period: hour
+            days_to_show: 2
+            chart_type: bar
+            grid_options:
+              columns: full
+
+      # ── Actividad ─────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Actividad
+            icon: mdi:history
+          - type: markdown
+            title: Últimas confirmaciones
+            grid_options:
+              columns: full
+            content: |-
+              {% set h = state_attr('sensor.boda_actividad', 'confirmaciones') or [] %}
+              {%- if not h %}Todavía no hay confirmaciones.{% endif %}
+              {%- for x in h[:15] %}
+              - {{ '✅' if x.a else '❌' }} **{{ x.n or 'Sin nombre' }}** · {{ x.p }} {{ 'persona' if x.p | int == 1 else 'personas' }}{{ ' · ' ~ x.g if x.g else '' }} · {{ as_timestamp(x.t) | timestamp_custom('%d/%m %H:%M') }}{% if x.m %}<br><i>{{ x.m }}</i>{% endif %}
+              {%- endfor %}
+          - type: markdown
+            title: Últimas subidas
+            grid_options:
+              columns: full
+            content: |-
+              {% set h = state_attr('sensor.boda_actividad', 'subidas') or [] %}
+              {%- if not h %}Todavía no hay fotos ni videos.{% endif %}
+              {%- for x in h[:10] %}
+              - 📷 **{{ x.n or 'Alguien' }}** · {{ x.f }} foto(s), {{ x.v }} video(s) · {{ as_timestamp(x.t) | timestamp_custom('%d/%m %H:%M') }}
+              {%- endfor %}
+
+      # ── Alexa ─────────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Alexa
+            icon: mdi:speaker-message
+          - type: button
+            name: Resumen
+            icon: mdi:clipboard-text
+            tap_action:
+              action: perform-action
+              perform_action: script.boda_resumen
+          - type: button
+            name: Novedades
+            icon: mdi:bell-ring
+            tap_action:
+              action: perform-action
+              perform_action: script.boda_novedades
+          - type: button
+            name: Marcar leído
+            icon: mdi:eye-check
+            tap_action:
+              action: perform-action
+              perform_action: script.boda_marcar_revisado
+          - type: tile
+            entity: input_text.boda_ultimo_anuncio
+            name: Último anuncio
+            grid_options:
+              columns: full
+          - type: tile
+            entity: sensor.boda_ultima_revision
+            name: Última consulta de novedades
+            grid_options:
+              columns: full
+          - type: entities
+            title: Anuncios automáticos
+            grid_options:
+              columns: full
+            entities:
+              - entity: input_boolean.boda_anunciar_confirmaciones
+                name: Cada confirmación
+              - entity: input_boolean.boda_anunciar_subidas
+                name: Fotos y videos nuevos
+              - entity: input_number.boda_ventana_subidas_min
+                name: Agrupar subidas cada
+              - entity: input_boolean.boda_anunciar_hitos
+                name: Hitos
+              - entity: input_number.boda_hito_visitas
+                name: Hito cada N visitas
+              - entity: input_datetime.boda_silencio_desde
+                name: Silencio desde
+              - entity: input_datetime.boda_silencio_hasta
+                name: Silencio hasta
+              - entity: binary_sensor.boda_horario_de_silencio
+                name: Ahora en silencio
+
+      # ── Ajustes ───────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Ajustes
+            icon: mdi:cog
+          - type: entities
+            grid_options:
+              columns: full
+            entities:
+              - entity: input_text.boda_alexa_destino
+                name: Echo destino (notify… o media_player…)
+              - entity: sensor.boda_invitados_esperados
+                name: Invitados esperados
+              - entity: sensor.boda_datos
+                name: Última novedad del sitio
+              - entity: sensor.boda_alexa_ultima_orden
+                name: Última orden de voz detectada

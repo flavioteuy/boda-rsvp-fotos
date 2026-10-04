@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev && npm cache clean --force
 
-COPY server.js ./
+COPY server.js homeassistant.js ./
 COPY public ./public
 COPY panel ./panel
 
