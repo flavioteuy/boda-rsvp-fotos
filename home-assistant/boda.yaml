@@ -549,9 +549,9 @@ automation:
   # 4) Orden de voz: "Alexa, novedades de la boda" / "Alexa, resumen de la boda"
   #    Requiere la integración oficial Alexa Devices (lee el historial de voz del Echo)
   #    y responde en el mismo Echo que te escuchó.
-  #    Se reconoce por lo que dijiste (si Amazon lo guarda) o por la respuesta de la rutina,
-  #    que tiene que empezar con "Ya te cuento" y decir "boda" (p. ej. "Ya te cuento las novedades de la boda").
-  #    Lo que dice Home Assistant nunca empieza con "Ya te cuento", así que no se responde a sí mismo.
+  #    Se reconoce por lo que dijiste (si Amazon lo guarda, tiene que decir "boda") o por la
+  #    respuesta de la rutina, que tiene que decir "Ya te cuento" (p. ej. "Ya te cuento las novedades").
+  #    Lo que dice Home Assistant nunca dice "Ya te cuento", así que no se responde a sí mismo.
   - id: boda_orden_de_voz
     alias: Boda · Responder orden de voz de Alexa
     mode: single
@@ -565,7 +565,7 @@ automation:
       - >-
         {% set o = (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower %}
         {% set r = (state_attr('sensor.boda_alexa_ultima_orden', 'respuesta') or '') | lower %}
-        {{ 'boda' in o or ('ya te cuento' in r and 'boda' in r) }}
+        {{ 'boda' in o or 'ya te cuento' in r }}
       - >-
         {% set t = as_datetime(states('sensor.boda_alexa_ultima_orden')) %}
         {{ t is not none and (now() - t).total_seconds() < 180 }}
