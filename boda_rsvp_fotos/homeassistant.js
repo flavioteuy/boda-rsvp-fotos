@@ -25,6 +25,24 @@ function limpiar(v, max) {
 function entero(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; }
 function plural(n, uno, varios) { return n + ' ' + (n === 1 ? uno : varios); }
 
+// Momento exacto de la boda (fecha + hora de inicio del panel, en la zona horaria del sitio), en UTC ISO.
+// Es el mismo que usa la cuenta regresiva del sitio. null si falta la fecha o la hora.
+function inicioBoda(fecha, hora, zona) {
+  const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fecha || ''));
+  const h = /^(\d{1,2}):(\d{2})/.exec(String(hora || ''));
+  if (!f || !h) return null;
+  const comoUTC = Date.UTC(+f[1], +f[2] - 1, +f[3], +h[1], +h[2], 0);
+  // Diferencia entre la hora local de "zona" y UTC en ese momento (cubre horario de verano si lo hubiera)
+  const offset = (t) => {
+    const p = new Intl.DateTimeFormat('en-US', { timeZone: zona || 'UTC', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' })
+      .formatToParts(new Date(t)).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - t;
+  };
+  let t = comoUTC - offset(comoUTC);
+  t = comoUTC - offset(t);
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+
 function crear() {
   let deps = null;                 // lo que pasa server.js en iniciar()
   let base = '', token = '';
@@ -122,6 +140,8 @@ function crear() {
       videos: nVideos,
       subidas_hoy: subidasHoy,
       fecha_boda: /^\d{4}-\d{2}-\d{2}$/.test(cfg.fecha || '') ? cfg.fecha : null,
+      hora_boda: /^\d{1,2}:\d{2}$/.test(cfg.horaInicio || '') ? cfg.horaInicio : null,
+      inicio_boda: inicioBoda(cfg.fecha, cfg.horaInicio, deps.zonaHoraria),
       novia: limpiar(cfg.novia, 60),
       novio: limpiar(cfg.novio, 60),
       grupos: grupos.length,
@@ -272,3 +292,4 @@ function crear() {
 module.exports = crear();
 module.exports.crear = crear;
 module.exports.limpiar = limpiar;
+module.exports.inicioBoda = inicioBoda;

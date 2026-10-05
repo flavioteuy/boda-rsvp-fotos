@@ -73,6 +73,7 @@ En el dashboard, **Ajustes → Echo destino**:
 | `sensor.boda_invitados_esperados` / `sensor.boda_pendientes_de_responder` / `sensor.boda_porcentaje_respondido` | Necesitan grupos o `invitados_esperados` |
 | `sensor.boda_fotos` / `sensor.boda_videos` / `sensor.boda_subidas_hoy` | Galería de invitados |
 | `sensor.boda_dias_para_la_boda` | Cuenta regresiva (fecha del panel) |
+| `sensor.boda_inicio` | Fecha y hora exactas de la boda (add-on 1.25.1+); el resumen de Alexa dice cuánto falta en días, horas, minutos y segundos |
 | `sensor.boda_datos` / `sensor.boda_actividad` | Los que publica el add-on (fuente de todo lo anterior) |
 | `script.boda_resumen` / `script.boda_novedades` / `script.boda_anunciar` | Para usar en tus automatizaciones |
 

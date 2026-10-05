@@ -1194,3 +1194,11 @@ Se actualiza a los pocos segundos de cada cambio (también al **borrar** o **rec
 **Pruebas:** el `server.js` real corriendo contra un Home Assistant falso que registra lo que recibe: 35 comprobaciones (lectura de lo que ya había, visitas idénticas a las del panel incluyendo bots y repetidas, confirmaciones y fotos con sus eventos y totales, borrar, deshacer, reiniciar estadísticas, HA caído sin afectar al sitio y HA reiniciado). Como en este entorno no se pudo instalar npm, Express y Multer se reemplazaron por versiones mínimas de prueba. El paquete de Home Assistant se probó en un simulador de sus plantillas con lo que publicó el servidor (39 comprobaciones). **No se probó en tu Home Assistant real ni con un Echo real.**
 
 **Para actualizar:** reemplazá `server.js`, `config.yaml`, `Dockerfile`, `panel` y `public`, agregá **`homeassistant.js`** (nuevo) y **Reconstruir**/**Actualizar**. Tu configuración, confirmaciones y fotos se conservan.
+
+## 40. Cambios de esta versión (1.25.1) — hora exacta de la boda en Home Assistant
+
+`sensor.boda_datos` suma dos atributos: **`hora_boda`** (la «hora de inicio» del panel) e **`inicio_boda`** (fecha + hora, el mismo momento que usa la cuenta regresiva del sitio). Con eso, el paquete de Home Assistant crea `sensor.boda_inicio` y Alexa dice en el resumen cuánto falta en **días, horas, minutos y segundos**. Nada cambia en el sitio ni en el panel.
+
+**Pruebas:** servidor real contra Home Assistant falso (36 comprobaciones, incluida la nueva) y la conversión de fecha y hora con zonas con y sin horario de verano.
+
+**Para actualizar:** reemplazá `homeassistant.js` y `config.yaml` (y si querés `panel` y `public`, que solo cambian el número de versión) y **Actualizar**/**Reconstruir**.

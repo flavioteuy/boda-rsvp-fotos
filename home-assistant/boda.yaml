@@ -181,6 +181,15 @@ template:
         availability: "{{ state_attr('sensor.boda_datos', 'subidas_hoy') is number }}"
         state: "{{ state_attr('sensor.boda_datos', 'subidas_hoy') }}"
 
+      # Momento exacto de la boda (fecha + hora de inicio del panel de la boda; add-on 1.25.1+).
+      # En el dashboard se ve como "en 36 días" y sirve para automatizaciones.
+      - name: Boda Inicio
+        unique_id: boda_inicio
+        icon: mdi:ring
+        device_class: timestamp
+        availability: "{{ as_datetime(state_attr('sensor.boda_datos', 'inicio_boda') | string, none) is not none }}"
+        state: "{{ as_datetime(state_attr('sensor.boda_datos', 'inicio_boda') | string).isoformat() }}"
+
       - name: Boda Dias para la Boda
         unique_id: boda_dias_para_la_boda
         icon: mdi:calendar-heart
@@ -368,7 +377,19 @@ script:
             {% if sin | count > 0 and sin | count <= 5 %}{{ 'Todavía no respondió el grupo' if sin | count == 1 else 'Todavía no respondieron los grupos' }} {{ nombres(sin) }}.{% elif sin | count > 5 %}Hay {{ sin | count }} grupos que todavía no respondieron.{% endif %}
             La invitación tiene {{ pl(vis, 'visita', 'visitas') }}{% if uni %} de {{ pl(uni, 'persona distinta', 'personas distintas') }}{% endif %}.
             En la galería hay {{ pl(fo, 'foto', 'fotos') }} y {{ pl(vi, 'video', 'videos') }}.
-            {% if dias | is_number %}{% set d = dias | int %}{% if d == 0 %}¡La boda es hoy!{% elif d == 1 %}¡La boda es mañana!{% else %}Faltan {{ d }} días para la boda.{% endif %}{% endif %}
+            {% set ini = as_datetime(state_attr(D, 'inicio_boda') | string, none) %}
+            {% if ini is not none %}
+              {% set seg = (ini - now()).total_seconds() | int %}
+              {% if seg > 0 %}
+                {% set partes = [] %}
+                {% set n = seg // 86400 %}{% if n %}{% set partes = partes + [pl(n, 'día', 'días')] %}{% endif %}
+                {% set n = (seg % 86400) // 3600 %}{% if n %}{% set partes = partes + [pl(n, 'hora', 'horas')] %}{% endif %}
+                {% set n = (seg % 3600) // 60 %}{% if n %}{% set partes = partes + [pl(n, 'minuto', 'minutos')] %}{% endif %}
+                {% set n = seg % 60 %}{% if n %}{% set partes = partes + [pl(n, 'segundo', 'segundos')] %}{% endif %}
+                {{ 'Falta' if partes | count == 1 and partes[0].split(' ')[0] == '1' else 'Faltan' }}
+                {{ (partes[:-1] | join(', ') ~ ' y ' ~ partes[-1]) if partes | count > 1 else partes | join('') }} para la boda.
+              {% elif as_local(ini).date() == now().date() %}¡La boda es hoy!{% endif %}
+            {% elif dias | is_number %}{% set d = dias | int %}{% if d == 0 %}¡La boda es hoy!{% elif d == 1 %}¡La boda es mañana!{% else %}Faltan {{ d }} días para la boda.{% endif %}{% endif %}
             {% endif %}
 
   boda_novedades:
