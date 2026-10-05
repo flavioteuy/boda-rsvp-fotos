@@ -50,10 +50,10 @@ En el dashboard, **Ajustes → Echo destino**:
 ### Pedírselo por voz
 **Opción A — Alexa Devices (sin Nabu Casa).** Home Assistant lee lo que le dijiste al Echo y contesta en ese mismo Echo.
 1. App Alexa → Más → **Rutinas** → `+` → *Cuando esto ocurra* → **Voz** → `novedades de la boda`.
-2. *Agregar acción* → **Alexa dice** → Personalizado → `Ya te cuento` (para que no conteste «no sé»).
-3. Repetí con `resumen de la boda`.
+2. *Agregar acción* → **Alexa dice** → Personalizado → **`Ya te cuento las novedades de la boda`**.
+3. Repetí con la frase `resumen de la boda` y la respuesta **`Ya te cuento el resumen de la boda`**.
 
-La frase tiene que tener **«boda»**. Si además dice *novedad, nuevo, nueva, cambio* o *pasó* → **novedades** desde la última vez que preguntaste; si no → **resumen** completo. Tarda unos segundos. Si no contesta, mirá en el dashboard **Última orden de voz detectada**.
+**La respuesta de la rutina es la que manda.** Cuando una frase dispara una rutina, Amazon muchas veces no guarda el texto de lo que dijiste, pero sí lo que contestó Alexa. Por eso la respuesta tiene que **empezar con «Ya te cuento»** y decir **«boda»**. Si además dice *novedad, nuevo, nueva, cambio* o *pasó* → **novedades** desde la última vez que preguntaste; si no → **resumen** completo. Podés tener varias rutinas (varias frases) con la misma respuesta. Tarda unos segundos. Si no contesta, mirá en **Herramientas para desarrolladores → Estados** el sensor `sensor.boda_alexa_ultima_orden`: sus atributos `orden` y `respuesta` muestran lo que Home Assistant recibió de Amazon.
 
 **Opción B — Nabu Casa.** Ajustes → Asistentes de voz → **Exponer** → `script.boda_novedades` y `script.boda_resumen`. En la app Alexa aparecen como **escenas**: creá la rutina con la frase y la acción *Hogar digital → Escena*. Contesta en el Echo destino.
 

@@ -211,6 +211,18 @@ template:
                        | rejectattr('state', 'in', ['unknown', 'unavailable'])
                        | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) %}
             {{ (state_attr(e, 'voice_command') or '') if e else '' }}
+          # Lo que contestó Alexa. Cuando la frase dispara una rutina, Amazon a veces no guarda
+          # el texto de la orden pero sí la respuesta de la rutina ("Ya te cuento las novedades de la boda").
+          respuesta: >-
+            {% set e = expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
+                       | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                       | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) %}
+            {{ (state_attr(e, 'voice_reply') or '') if e else '' }}
+          intencion: >-
+            {% set e = expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
+                       | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                       | sort(attribute='state') | map(attribute='entity_id') | list | last | default('', true) %}
+            {{ (state_attr(e, 'intent') or '') if e else '' }}
           responder_en: >-
             {% set e = expand(integration_entities('alexa_devices') | select('match', '^event[.]') | list)
                        | rejectattr('state', 'in', ['unknown', 'unavailable'])
@@ -537,6 +549,9 @@ automation:
   # 4) Orden de voz: "Alexa, novedades de la boda" / "Alexa, resumen de la boda"
   #    Requiere la integración oficial Alexa Devices (lee el historial de voz del Echo)
   #    y responde en el mismo Echo que te escuchó.
+  #    Se reconoce por lo que dijiste (si Amazon lo guarda) o por la respuesta de la rutina,
+  #    que tiene que empezar con "Ya te cuento" y decir "boda" (p. ej. "Ya te cuento las novedades de la boda").
+  #    Lo que dice Home Assistant nunca empieza con "Ya te cuento", así que no se responde a sí mismo.
   - id: boda_orden_de_voz
     alias: Boda · Responder orden de voz de Alexa
     mode: single
@@ -547,15 +562,21 @@ automation:
         not_from: [unknown, unavailable]
         not_to: [unknown, unavailable, sin datos]
     conditions:
-      - "{{ 'boda' in (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower }}"
+      - >-
+        {% set o = (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower %}
+        {% set r = (state_attr('sensor.boda_alexa_ultima_orden', 'respuesta') or '') | lower %}
+        {{ 'boda' in o or ('ya te cuento' in r and 'boda' in r) }}
       - >-
         {% set t = as_datetime(states('sensor.boda_alexa_ultima_orden')) %}
         {{ t is not none and (now() - t).total_seconds() < 180 }}
     actions:
       - variables:
-          orden: "{{ (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower }}"
+          texto: >-
+            {% set o = (state_attr('sensor.boda_alexa_ultima_orden', 'orden') or '') | lower %}
+            {% set r = (state_attr('sensor.boda_alexa_ultima_orden', 'respuesta') or '') | lower %}
+            {{ o ~ ' ' ~ (r if 'ya te cuento' in r else '') }}
           destino: "{{ state_attr('sensor.boda_alexa_ultima_orden', 'responder_en') or '' }}"
-      - if: "{{ orden is search('novedad|nuevo|nueva|cambio|pasó|paso') }}"
+      - if: "{{ texto is search('novedad|nuevo|nueva|cambio|pasó|paso') }}"
         then:
           - action: script.boda_novedades
             data: { destino: "{{ destino }}" }
