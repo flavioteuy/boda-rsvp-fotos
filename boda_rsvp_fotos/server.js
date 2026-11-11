@@ -1286,7 +1286,7 @@ const uploadFotosInvitados = multer({
     destination: (req, file, cb) => cb(null, dirFotosActual()),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + sufijoAleatorio() + (extensionSegura(file, ['image', 'video']) || '.jpg'))
   }),
-  limits: { fileSize: 500 * 1024 * 1024, files: 10, fields: 10, fieldSize: 10 * 1024 },
+  limits: { fileSize: 4 * 1024 * 1024 * 1024, files: 10, fields: 10, fieldSize: 10 * 1024 },
   fileFilter: (req, file, cb) => extensionSegura(file, ['image', 'video']) ? cb(null, true) : cb(new Error('Solo se permiten imágenes o videos (JPG, PNG, HEIC, MP4, MOV…)'))
 });
 // Reserva de espacio: nunca se llena el disco del NUC (Home Assistant comparte disco con /media y se rompe si se queda sin lugar).
