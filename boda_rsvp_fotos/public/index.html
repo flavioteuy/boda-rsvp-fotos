@@ -1179,7 +1179,7 @@ document.getElementById('form-fotos').addEventListener('submit', async function 
   const texto = document.getElementById('texto-progreso');
   const boton = document.getElementById('btn-subir-fotos');
   const MB = 1024 * 1024;
-  const LIMITE = 500 * MB;
+  const LIMITE = 4096 * MB;
 
   const nombre = form.subido_por.value.trim();
   const archivos = Array.from(form.fotos.files);
@@ -1189,7 +1189,7 @@ document.getElementById('form-fotos').addEventListener('submit', async function 
   resultado.textContent = '';
   const fallidos = [];                      // { file, motivo }
   const validos = archivos.filter(function (f) {
-    if (f.size > LIMITE) { fallidos.push({ file: f, motivo: 'supera el máximo de 500 MB' }); return false; }
+    if (f.size > LIMITE) { fallidos.push({ file: f, motivo: 'supera el máximo de 4096 MB' }); return false; }
     return true;
   });
   const totalBytes = validos.reduce(function (t, f) { return t + f.size; }, 0) || 1;
