@@ -55,7 +55,7 @@ Se agregaron tres endpoints de administración (`POST /api/admin/rsvps/borrar`, 
 
 - Nuevo endpoint `POST /api/admin/prueba-subida`, solo para el administrador: pasa por la clave (con el bloqueo por intentos), por el modo «solo red local» si lo activaste, y no se cachea. Solo cuenta los bytes que recibe y los descarta: **no escribe nada en disco**. Rechaza pruebas de más de 80 MB.
 - Los mensajes de error de subida se traducen a español; ya no se devuelve el texto interno de la librería de subidas.
-- Recordatorio relacionado: el límite de tamaño de subida del proxy (`client_max_body_size`) no es un tema de seguridad del add-on, pero conviene fijarlo en un valor razonable (600 MB alcanza) y no en «ilimitado».
+- Recordatorio relacionado: el límite de tamaño de subida del proxy (`client_max_body_size`) no es un tema de seguridad del add-on, pero conviene fijarlo en un valor razonable (4100 MB alcanza para el máximo de 4096 MB por archivo) y no en «ilimitado».
 
 ## Actualización 1.15.0: controles del slideshow
 
@@ -123,6 +123,13 @@ Solo diseño del panel (la barra de secciones puede ir a la izquierda). No hay e
 - El borrado **no se puede deshacer**. Para evitar accidentes, el panel muestra la cantidad y el peso, y desde 10 archivos exige escribir BORRAR; es una protección del panel (el servidor, como el borrado de una sola foto, confía en quien tiene la contraseña).
 - Sin dependencias ni recursos externos nuevos; la política de seguridad de contenido no cambia.
 
+## Actualización 1.26.0: modo «solo galería»
+
+- El interruptor se cambia con `POST /api/admin/galeria`, que ya exigía la contraseña por cabecera y está bajo `/api/admin` (bloqueo por intentos; 404 desde Internet con «solo red local»; sin caché). Solo vale `true` (booleano): cualquier otro valor lo deja apagado, y un pedido que no trae el campo no lo cambia.
+- **Cerrar la invitación no es solo esconderla:** con el modo encendido, `POST /api/rsvp` responde 403 y no guarda nada, así que nadie puede seguir mandando confirmaciones con la página vieja abierta o con un pedido hecho a mano. El resto de lo público no se abre: la galería sigue mostrando a cada invitado solo lo suyo.
+- Con el modo encendido, `/` y `/index.html` se arman en el servidor a partir del archivo `public/index.html` (ruta fija, **sin usar nada del pedido**) agregando una clase a la etiqueta `<html>`. No hay entrada del usuario en esa respuesta, así que no se abre ninguna inyección; la política de seguridad de contenido no cambia. Con el modo apagado ese camino ni se ejecuta.
+- **Límite de subida de 4096 MB por archivo** (1.25.2): sigue protegiéndote la reserva de espacio (el servidor rechaza una subida si quedarían menos de 2 GB libres) y el tope de pedidos por hora por IP, pero ahora un solo invitado puede ocupar bastante disco con pocos archivos. El límite del proxy debe subir a juego (`4100M`) y conviene mantener las copias y el monitoreo de disco de Home Assistant a la vista.
+
 ## Detalle de lo corregido
 
 **1. Subidas.** Antes la extensión salía del nombre que mandaba el navegador. Ahora sale de una lista cerrada (JPG, PNG, GIF, WEBP,
@@ -174,4 +181,5 @@ dañado se guarda una copia `*.corrupto-*` en `/data` antes de continuar, en vez
 - La política CSP real se cargó en Chromium con el sitio público y el panel: 0 violaciones, 0 errores de JavaScript.
 - 1.24.0 (borrar elegidas): 8 pruebas nuevas sobre `server.js` y 22 en el panel con Chromium (más las de la 1.23.0, que siguen pasando).
 - 1.23.0 (descargas): 38 pruebas nuevas sobre `server.js` más una en «solo red local», y 38 en el panel con Chromium. El ZIP se verificó con `unzip -t` y con Python (byte a byte contra los originales), incluido un ZIP64 real de 5 GB. **No** se probó con Express real, con un celular físico, ni abriendo el ZIP en el Explorador de Windows o el Finder.
+- 1.26.0 (solo galería): 42 pruebas sobre `server.js` (Express simulado), 34 en el sitio y 16 en el panel con Chromium. Solo se probó lo modificado.
 - **No** se probó contra el Express/multer reales instalados, **no** se ejecutó `npm audit`, **no** se hizo un escaneo de red ni de puertos, y **no** se revisó la configuración de tu router, DuckDNS, certificados ni Home Assistant. Después de reconstruir, subí una foto de prueba desde un celular y confirmá una asistencia para comprobar que todo sigue andando.

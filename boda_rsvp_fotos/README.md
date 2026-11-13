@@ -208,7 +208,7 @@ Casi todo lo que sigue se controla desde el panel de administración, sección p
   puede habilitar o deshabilitar; mientras está apagada se muestra el
   mensaje que configures. Pensado para activarlo el día de la boda.
 - **Videos en la galería**: además de fotos, ahora se pueden subir videos
-  (hasta 500 MB por archivo).
+  (hasta 4096 MB por archivo).
 - **Testigos**: 4 testigos configurables con nombre, rol y foto opcional.
 - **Regalos**: texto visible + un mensaje oculto (por ejemplo los datos de
   la cuenta bancaria) que se revela al tocar un botón.
@@ -882,13 +882,13 @@ Con el mapa oculto (modos «botón» y «enlace») ahora se ve **únicamente el 
 **Qué pasaba:** por la IP local funciona y por el dominio no. Eso indica que el límite está en el **proxy inverso** que está entre Internet y el add-on (Nginx Proxy Manager u otro), no en el add-on. Por defecto nginx acepta cuerpos de hasta **1 MB** y corta todo lo que pase con «413 Request Entity Too Large». El add-on ni se entera de esa subida.
 
 **Qué hay que cambiar (en el proxy, no en el add-on):**
-- **Nginx Proxy Manager:** Proxy Host del sitio → pestaña *Advanced* → *Custom Nginx Configuration* → `client_max_body_size 600M;` → Save.
-- **Nginx a mano:** dentro del bloque `server { … }` (o `location`) del sitio: `client_max_body_size 600M;` y recargar nginx.
-- **Caddy:** `request_body { max_size 600MB }`.
+- **Nginx Proxy Manager:** Proxy Host del sitio → pestaña *Advanced* → *Custom Nginx Configuration* → `client_max_body_size 4100M;` → Save.
+- **Nginx a mano:** dentro del bloque `server { … }` (o `location`) del sitio: `client_max_body_size 4100M;` y recargar nginx.
+- **Caddy:** `request_body { max_size 4100MB }`.
 - **Apache:** `LimitRequestBody 0`.
 - **Cloudflare (plan gratis):** el límite es de 100 MB por pedido y no se puede cambiar; sirve para música y fotos, pero los videos muy grandes de los invitados pueden fallar ahí.
 
-**Esto también afecta a los invitados:** las fotos y videos que suben desde el celular por el dominio (hasta 500 MB por archivo) se cortan igual. Conviene arreglarlo antes de la boda y probar con datos móviles.
+**Esto también afecta a los invitados:** las fotos y videos que suben desde el celular por el dominio (hasta 4096 MB por archivo) se cortan igual. Conviene arreglarlo antes de la boda y probar con datos móviles.
 
 **Novedades en el add-on para que no sea un misterio:**
 - Nueva tarjeta en el panel **«Probar subidas desde internet (error 413)»**: envía datos de prueba de 0,5 / 2 / 8 / 30 / 70 MB y te dice hasta qué tamaño deja pasar tu conexión. Abrí el panel **desde la dirección de Internet** para que la prueba tenga sentido (por la IP local pasa todo).
@@ -1202,3 +1202,22 @@ Se actualiza a los pocos segundos de cada cambio (también al **borrar** o **rec
 **Pruebas:** servidor real contra Home Assistant falso (36 comprobaciones, incluida la nueva) y la conversión de fecha y hora con zonas con y sin horario de verano.
 
 **Para actualizar:** reemplazá `homeassistant.js` y `config.yaml` (y si querés `panel` y `public`, que solo cambian el número de versión) y **Actualizar**/**Reconstruir**.
+
+## 41. Cambios de esta versión (1.26.0) — modo «solo galería» (la boda ya terminó)
+
+**Dónde se activa:** panel → pestaña **Invitados** → tarjeta «Subida de fotos en la galería» → casilla **Mostrar solo la galería (la boda ya terminó)** → **Guardar**. Para volver atrás: desmarcala y **Guardar** (se aplica en el momento, no hace falta reiniciar nada).
+
+**Qué pasa en el sitio con la casilla marcada**
+- Desaparecen el **sobre**, las pestañas «Invitación / Galería» y **todas las secciones de la invitación** (cuenta regresiva, ubicaciones, clima, dress code, historia, testigos, regalos y confirmación de asistencia). Tampoco se pide el clima ni se arman mapas.
+- Queda la **portada** (nombres, fecha, lugar y mensaje de bienvenida) y la **galería** de fotos y videos. Cualquier enlace viejo (`/`, `/?g=…`, `/#inicio`, `/galeria.html`) abre directo la galería.
+- La portada se entrega ya sin el sobre, así que no se ve ni un destello de él al abrir el enlace.
+- **Confirmar asistencia queda cerrado también en el servidor:** quien tenga la página vieja abierta y toque «Enviar» recibe «La invitación ya no está disponible. ¡Gracias por acompañarnos!» y no se guarda nada.
+- Las estadísticas de visitas siguen contando; ahora cada entrada figura como vista «galería».
+
+**Qué NO cambia:** las confirmaciones ya recibidas (y su exportación), los grupos y enlaces personales, las fotos subidas, el panel, las descargas, los avisos de Home Assistant/Alexa y la música (si tenías una configurada, el botón sigue disponible). El **interruptor de subida** sigue siendo independiente: si ya no querés que suban más fotos, desmarcá «Habilitar que los invitados suban…» y cambiá el «Mensaje mientras está deshabilitado» (el de fábrica dice «Muy pronto vas a poder subir…»). Como siempre, cada invitado ve solo lo que subió desde su propio navegador; los novios ven todo desde el panel.
+
+**Límite de subida (1.25.2, el cambio que hiciste vos):** el sitio ahora acepta archivos de hasta **4096 MB**. El servidor sigue rechazando una subida si después de recibirla quedarían menos de 2 GB libres en el disco. En esta versión los textos de ayuda del panel y de este README pasan a recomendar `client_max_body_size 4100M;` en el proxy (antes decían 600M, que cortaría los videos de más de 600 MB). Si tu proxy sigue en 600M, esos videos fallan en el proxy aunque el add-on los acepte.
+
+**Pruebas:** el `server.js` real contra un Express simulado (42 comprobaciones: portada con y sin el modo, confirmaciones rechazadas y guardadas, un pedido sin el campo no lo apaga, persistencia, archivos estáticos) y Chromium con el sitio (34: modo apagado sin cambios, modo encendido sin destello del sobre y sin secciones ni clima, portada vieja en caché, galería con subida abierta y cerrada, `galeria.html`, `?sinsobre=1`) y con el panel (16). **No** se probó en tu Home Assistant real, con el Express real ni en un celular físico.
+
+**Para actualizar:** reemplazá `server.js`, `config.yaml`, `panel` y `public` (la carpeta entera del add-on sirve) y **Actualizar**/**Reconstruir**. Si ya tenés el repositorio en Home Assistant, alcanza con la actualización automática (sube la versión a 1.26.0). Tu configuración, confirmaciones y fotos se conservan; el modo arranca **apagado** hasta que lo marques.

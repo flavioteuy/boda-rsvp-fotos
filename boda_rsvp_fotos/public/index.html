@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nuestra Boda - Sol y Flavio</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.25.1">
-<link rel="icon" type="image/x-icon" sizes="any" href="favicon.ico?v=1.25.1">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1.25.1">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.26.0">
+<link rel="icon" type="image/x-icon" sizes="any" href="favicon.ico?v=1.26.0">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1.26.0">
 <meta name="theme-color" content="#7d1f2f">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Cormorant+Garamond&family=EB+Garamond&family=Lora&family=Merriweather&family=Libre+Baskerville&family=Cinzel&family=Marcellus&family=Bodoni+Moda&family=Forum&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script&family=Parisienne&family=Tangerine&family=Allura&family=Alex+Brush&family=Sacramento&family=Italianno&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Josefin+Sans&family=Raleway&family=Quicksand&family=Poppins&family=Lato&family=Jost:wght@300..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.25.1">
-<link rel="stylesheet" href="moderno.css?v=1.25.1">
-<script src="sello.js?v=1.25.1"></script>
-<script src="paleta.js?v=1.25.1"></script>
+<link rel="stylesheet" href="style.css?v=1.26.0">
+<link rel="stylesheet" href="moderno.css?v=1.26.0">
+<script src="sello.js?v=1.26.0"></script>
+<script src="paleta.js?v=1.26.0"></script>
 </head>
 <body>
 
@@ -261,6 +261,9 @@ const grupoUrl = new URLSearchParams(window.location.search).get('grupo') || '';
 let CFG = null;
 let fotosPareja = [];
 let indiceSlide = 0;
+// Modo "solo galeria" (se enciende desde el panel cuando la boda ya termino): sin sobre, sin invitacion y sin confirmaciones; queda solo la galeria.
+// El servidor ya entrega la portada con la clase "solo-galeria" puesta; si no estuviera (pagina en cache), se activa apenas llega la configuracion.
+let soloGaleria = document.documentElement.classList.contains('solo-galeria');
 
 /* =====================================================================
    Estadisticas de acceso (se guardan en el servidor)
@@ -363,6 +366,16 @@ setTimeout(function () { document.documentElement.classList.add('hero-in'); }, 2
   document.body.style.overflow = '';
   document.documentElement.classList.add('hero-in');
 })();
+// Modo "solo galeria": no hay sobre que abrir. Igual que con ?sinsobre=1, la pantalla del sobre se oculta pero NO se saca del documento
+// (la configuracion todavia la usa al cargar).
+function activarSoloGaleria() {
+  soloGaleria = true;
+  sobreCerrado = true;
+  document.documentElement.classList.add('solo-galeria', 'hero-in');
+  pantallaSobre.style.display = 'none';
+  document.body.style.overflow = '';
+}
+if (soloGaleria) activarSoloGaleria();
 
 sobreEl.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
@@ -462,7 +475,7 @@ function ajustarSubidaFotos() {
 window.addEventListener('resize', function () { clearTimeout(ajustarSubidaFotos.t); ajustarSubidaFotos.t = setTimeout(ajustarSubidaFotos, 120); });
 
 /* ---------- Vistas (Invitacion / Galeria) sin recargar la pagina ---------- */
-function vistaActual() { return location.hash === '#galeria' ? 'galeria' : 'inicio'; }
+function vistaActual() { return (soloGaleria || location.hash === '#galeria') ? 'galeria' : 'inicio'; }
 function mostrarVista(primera) {
   const v = vistaActual();
   document.getElementById('vista-inicio').style.display = v === 'inicio' ? '' : 'none';
@@ -777,23 +790,24 @@ function aplicarConfig(cfg) {
 
 fetch('/api/config').then(function (r) { return r.json(); }).then(function (cfg) {
   CFG = cfg;
+  if (cfg.galeria && cfg.galeria.soloGaleria && !soloGaleria) activarSoloGaleria();
   aplicarConfig(cfg);
 
-  if (grupoUrl) {
+  if (grupoUrl && !soloGaleria) {
     fetch('/api/grupo/' + encodeURIComponent(grupoUrl)).then(function (r) { return r.ok ? r.json() : null; }).then(function (g) {
       if (g && g.invitados && g.invitados.length) document.getElementById('para-quien').textContent = 'Para: ' + g.invitados.join(', ');
     }).catch(function () {});
   }
 
   const cont = document.getElementById('secciones');
-  (cfg.secciones || []).forEach(function (s) {
+  // En modo "solo galeria" no se arma ninguna seccion de la invitacion (ni se pide el clima ni se preparan mapas)
+  (soloGaleria ? [] : (cfg.secciones || [])).forEach(function (s) {
     if (!s.habilitado) return;
     const nodo = cargarSeccion(s.id, cfg);
     if (nodo) cont.appendChild(nodo);
   });
   if (fotosPareja.length) iniciarSlideshow();
-  cargarClima();
-  prepararMapas();
+  if (!soloGaleria) { cargarClima(); prepararMapas(); }
   iniciarAnimaciones(cfg);
 
   mostrarVista(true);

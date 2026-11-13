@@ -174,6 +174,7 @@ function limpiarGaleria(g) {
   g = (g && typeof g === 'object' && !Array.isArray(g)) ? g : {};
   return {
     subidaHabilitada: !!g.subidaHabilitada,
+    soloGaleria: g.soloGaleria === true,   // la boda ya termino: el sitio muestra unicamente la galeria (sin sobre, invitacion ni confirmaciones)
     mensajeDeshabilitado: (typeof g.mensajeDeshabilitado === 'string' && g.mensajeDeshabilitado.trim()) ? g.mensajeDeshabilitado.slice(0, 200) : 'Muy pronto vas a poder subir tus fotos y videos ✨',
     titulo: typeof g.titulo === 'string' ? textoLinea(g.titulo, 100) : GALERIA_TITULO_DEF,
     subtitulo: typeof g.subtitulo === 'string' ? textoMultilinea(g.subtitulo, GALERIA_SUBTITULO_MAX) : GALERIA_SUBTITULO_DEF
@@ -421,6 +422,20 @@ app.use(['/api/admin', '/api/rsvps'], soloRedLocal);
 // Aunque en la carpeta "public" haya quedado un admin.html de una version vieja (pasa al copiar una carpeta encima de otra sin borrar
 // lo anterior), nunca se sirve: el panel actual solo vive en la ruta secreta. Sin esto se abriria un panel viejo, sin las opciones nuevas.
 app.use((req, res, next) => (/^\/admin(\.html)?\/?$/i.test(req.path || '') ? res.status(404).type('text/plain').send('Not found') : next()));
+// Modo "solo galeria" (la boda ya termino): la portada se entrega con la clase "solo-galeria" ya puesta, asi nunca se ve ni un destello del sobre.
+// Con el modo apagado esto no hace nada: el pedido sigue de largo y lo atiende el sitio de siempre.
+let htmlPortadaCache = { mtime: 0, texto: '' };
+app.get(['/', '/index.html'], (req, res, next) => {
+  try {
+    const cfg = readSiteConfig();
+    if (!cfg.galeria || !cfg.galeria.soloGaleria) return next();
+    const archivo = path.join(__dirname, 'public', 'index.html');
+    const st = fs.statSync(archivo);
+    if (htmlPortadaCache.mtime !== st.mtimeMs) htmlPortadaCache = { mtime: st.mtimeMs, texto: fs.readFileSync(archivo, 'utf8') };
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(htmlPortadaCache.texto.replace(/<html(\s|>)/i, '<html class="solo-galeria"$1'));
+  } catch (e) { next(); }
+});
 // no-cache (no "sin cachear del todo", sino "revalidar siempre con el servidor") para que al actualizar
 // el add-on los navegadores (sobre todo en celulares) no sigan mostrando un HTML/CSS/JS viejo guardado.
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -822,9 +837,10 @@ app.post('/api/admin/rsvp-textos', checkAdmin, (req, res) => {
 // ==================== GALERIA (habilitar subida) ====================
 app.post('/api/admin/galeria', checkAdmin, (req, res) => {
   const cfg = readSiteConfig();
-  const { subidaHabilitada, mensajeDeshabilitado, titulo, subtitulo } = req.body || {};
+  const { subidaHabilitada, soloGaleria, mensajeDeshabilitado, titulo, subtitulo } = req.body || {};
   cfg.galeria = limpiarGaleria({
     subidaHabilitada: !!subidaHabilitada,
+    soloGaleria: soloGaleria !== undefined ? soloGaleria === true : cfg.galeria.soloGaleria,   // si el pedido no lo trae, se deja como estaba
     mensajeDeshabilitado: String(mensajeDeshabilitado || cfg.galeria.mensajeDeshabilitado),
     titulo: titulo !== undefined ? titulo : cfg.galeria.titulo,
     subtitulo: subtitulo !== undefined ? subtitulo : cfg.galeria.subtitulo
@@ -1183,6 +1199,7 @@ app.post('/api/rsvp', limitar('rsvp', 60, 60 * 60 * 1000), (req, res) => {
   if (!nombreLimpio || !asistenciaLimpia) return res.status(400).json({ error: 'Faltan datos (nombre y asistencia son obligatorios)' });
   if (!['si', 'no'].includes(asistenciaLimpia)) return res.status(400).json({ error: 'La asistencia debe ser "sí" o "no"' });
   const cfg = readSiteConfig();
+  if (cfg.galeria && cfg.galeria.soloGaleria) return res.status(403).json({ error: 'La invitación ya no está disponible. ¡Gracias por acompañarnos!' });   // modo "solo galeria"
   // El formulario manda "personas" = cantidad total contando al invitado (minimo 1). Internamente se guarda como
   // "acompanantes" (personas - 1) para no romper las confirmaciones viejas, los grupos, las estadisticas ni las exportaciones.
   let acompLimpios;

@@ -6,16 +6,16 @@
 <meta name="robots" content="noindex, nofollow, noarchive">
 <base href="/">
 <title>Panel de administración - Nuestra Boda</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.25.1">
-<link rel="icon" type="image/x-icon" sizes="any" href="favicon.ico?v=1.25.1">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1.25.1">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.26.0">
+<link rel="icon" type="image/x-icon" sizes="any" href="favicon.ico?v=1.26.0">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1.26.0">
 <meta name="theme-color" content="#7d1f2f">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Cormorant+Garamond&family=EB+Garamond&family=Lora&family=Merriweather&family=Libre+Baskerville&family=Cinzel&family=Marcellus&family=Bodoni+Moda&family=Forum&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script&family=Parisienne&family=Tangerine&family=Allura&family=Alex+Brush&family=Sacramento&family=Italianno&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Josefin+Sans&family=Raleway&family=Quicksand&family=Poppins&family=Lato&family=Jost&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.25.1">
-<script src="sello.js?v=1.25.1"></script>
-<script src="paleta.js?v=1.25.1"></script>
+<link rel="stylesheet" href="style.css?v=1.26.0">
+<script src="sello.js?v=1.26.0"></script>
+<script src="paleta.js?v=1.26.0"></script>
 <style>
 html { scroll-behavior: auto; } body { background-attachment: initial !important; }
 .sf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; margin: 12px 0; }
@@ -222,7 +222,7 @@ button.rsvp-x { width: auto; margin: 0; padding: 5px 10px; font-size: .78rem; fo
         </div>
         <div id="probar-aviso" class="nota-fina" role="status"></div>
       </div>
-      <p class="nota-fina">Panel de la versión <b>1.25.1</b>. Si en la lista no ves «Fotos del sobre», estás viendo un panel viejo (ver README, «Cómo actualizar»).</p>
+      <p class="nota-fina">Panel de la versión <b>1.26.0</b>. Si en la lista no ves «Fotos del sobre», estás viendo un panel viejo (ver README, «Cómo actualizar»).</p>
     </div>
 
     <div id="pest-ancla"></div>
@@ -846,6 +846,8 @@ button.rsvp-x { width: auto; margin: 0; padding: 5px 10px; font-size: .78rem; fo
 
     <div class="tarjeta admin-seccion">
       <h3>Subida de fotos en la galería</h3>
+      <label><input type="checkbox" id="galeria-solo" style="width:auto;display:inline;"> <b>Mostrar solo la galería</b> (la boda ya terminó)</label>
+      <p class="nota-fina" style="margin-top:0;">Con esto marcado, el sitio muestra únicamente la portada y la galería de fotos y videos: desaparecen el sobre, la invitación y la confirmación de asistencia (las confirmaciones ya recibidas no se tocan). Al desmarcarlo y guardar, vuelve todo como estaba. No cambia el interruptor de subida de más abajo.</p>
       <label for="galeria-titulo">Título de la página de fotos</label>
       <input type="text" id="galeria-titulo" maxlength="100" placeholder="Subí tus fotos y videos">
       <label for="galeria-subtitulo">Subtítulo</label>
@@ -910,11 +912,11 @@ button.rsvp-x { width: auto; margin: 0; padding: 5px 10px; font-size: .78rem; fo
       <div id="resultado-prueba-subida" role="status" aria-live="polite"></div>
       <details id="ayuda-proxy" class="ayuda-proxy">
         <summary>Cómo subir el límite en el proxy</summary>
-        <p><b>Nginx Proxy Manager:</b> Hosts → Proxy Hosts → los tres puntitos de tu dominio → Edit → pestaña <b>Advanced</b> → en «Custom Nginx Configuration» escribí <code>client_max_body_size 600M;</code> → Save.</p>
-        <p><b>Otro Nginx</b> (por ejemplo el add-on «NGINX Home Assistant SSL proxy» con configuración personalizada): agregá <code>client_max_body_size 600M;</code> dentro del bloque <code>server { … }</code> de tu dominio y reiniciá el proxy.</p>
-        <p><b>Caddy:</b> <code>request_body { max_size 600MB }</code> dentro del sitio. <b>Apache:</b> <code>LimitRequestBody 0</code>.</p>
+        <p><b>Nginx Proxy Manager:</b> Hosts → Proxy Hosts → los tres puntitos de tu dominio → Edit → pestaña <b>Advanced</b> → en «Custom Nginx Configuration» escribí <code>client_max_body_size 4100M;</code> → Save.</p>
+        <p><b>Otro Nginx</b> (por ejemplo el add-on «NGINX Home Assistant SSL proxy» con configuración personalizada): agregá <code>client_max_body_size 4100M;</code> dentro del bloque <code>server { … }</code> de tu dominio y reiniciá el proxy.</p>
+        <p><b>Caddy:</b> <code>request_body { max_size 4100MB }</code> dentro del sitio. <b>Apache:</b> <code>LimitRequestBody 0</code>.</p>
         <p><b>Cloudflare</b> (si tu dominio pasa por su proxy naranja): el plan gratuito limita cada pedido a 100 MB y no se puede subir.</p>
-        <p>600M alcanza para lo máximo que acepta el sitio (500 MB por archivo). Después de cambiarlo, volvé a tocar el botón de arriba para confirmar.</p>
+        <p>4100M alcanza para lo máximo que acepta el sitio (4096 MB por archivo). Después de cambiarlo, volvé a tocar el botón de arriba para confirmar.</p>
       </details>
     </div>
     </section>
@@ -1167,6 +1169,7 @@ async function cargarConfigActual() {
   document.getElementById('rsvp-descripcion').value = (cfg.rsvpTextos && cfg.rsvpTextos.descripcion) || '';
 
   document.getElementById('galeria-habilitada').checked = !!(cfg.galeria && cfg.galeria.subidaHabilitada);
+  document.getElementById('galeria-solo').checked = !!(cfg.galeria && cfg.galeria.soloGaleria);
   document.getElementById('galeria-mensaje').value = (cfg.galeria && cfg.galeria.mensajeDeshabilitado) || '';
   document.getElementById('galeria-titulo').value = (cfg.galeria && typeof cfg.galeria.titulo === 'string') ? cfg.galeria.titulo : '';
   document.getElementById('galeria-subtitulo').value = (cfg.galeria && typeof cfg.galeria.subtitulo === 'string') ? cfg.galeria.subtitulo : '';
@@ -1819,9 +1822,9 @@ document.getElementById('btn-guardar-rsvp-textos').addEventListener('click', asy
 });
 
 document.getElementById('btn-guardar-galeria').addEventListener('click', async () => {
-  const cuerpo = { subidaHabilitada: document.getElementById('galeria-habilitada').checked, mensajeDeshabilitado: document.getElementById('galeria-mensaje').value, titulo: document.getElementById('galeria-titulo').value, subtitulo: document.getElementById('galeria-subtitulo').value };
+  const cuerpo = { subidaHabilitada: document.getElementById('galeria-habilitada').checked, soloGaleria: document.getElementById('galeria-solo').checked, mensajeDeshabilitado: document.getElementById('galeria-mensaje').value, titulo: document.getElementById('galeria-titulo').value, subtitulo: document.getElementById('galeria-subtitulo').value };
   const r = await fetch('/api/admin/galeria', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, cabeceras()), body: JSON.stringify(cuerpo) });
-  document.getElementById('resultado-galeria').innerHTML = r.ok ? '<div class="mensaje-ok">Guardado</div>' : '<div class="mensaje-error">Error al guardar</div>';
+  document.getElementById('resultado-galeria').innerHTML = r.ok ? '<div class="mensaje-ok">Guardado' + (cuerpo.soloGaleria ? ' · el sitio ahora muestra solo la galería' : '') + '</div>' : '<div class="mensaje-error">Error al guardar</div>';
 });
 
 document.getElementById('btn-guardar-secciones').addEventListener('click', async () => {
@@ -2139,7 +2142,7 @@ document.getElementById('btn-probar-subida').addEventListener('click', async () 
   if (otro) { out.innerHTML = '<div class="mensaje-error">' + esc(otro) + '</div>'; return; }
   if (!fallo) {
     out.innerHTML = '<div class="mensaje-ok">✅ Pasaron todas las pruebas (hasta ' + pasoMax + ' MB) por ' + donde + '.</div>' +
-      '<p class="nota-fina">Los videos de los invitados pueden pesar hasta 500 MB: asegurate de que el límite de tu proxy sea de <b>600M</b> o más (no se puede medir tanto desde acá).' + (local ? ' Estás en la red local: para medir lo que ven los invitados, abrí este panel desde la dirección de internet.' : '') + '</p>';
+      '<p class="nota-fina">Los videos de los invitados pueden pesar hasta 4096 MB: asegurate de que el límite de tu proxy sea de <b>4100M</b> o más (no se puede medir tanto desde acá).' + (local ? ' Estás en la red local: para medir lo que ven los invitados, abrí este panel desde la dirección de internet.' : '') + '</p>';
     return;
   }
   const hasta = pasoMax ? 'hasta ' + pasoMax + ' MB' : 'menos de ' + pasos[0] + ' MB';

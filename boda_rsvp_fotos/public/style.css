@@ -33,6 +33,8 @@ body.con-fondo::before {
   .capa-textura { position: absolute; inset: 0; border-radius: inherit; }
 }
 .contenedor { max-width: 640px; margin: 0 auto; padding: 0 20px 60px; }
+/* Modo "solo galeria" (se activa desde el panel cuando la boda ya termino): sin sobre y sin pestañas; quedan la portada y la galeria */
+html.solo-galeria #pantalla-sobre, html.solo-galeria #nav-vistas { display: none !important; }
 
 /* --- Pantalla de sobre (intro) ---
    Geometria (importante): el sobre es UN solo rectangulo (.sobre). La solapa nace en su borde superior
